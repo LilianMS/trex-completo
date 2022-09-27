@@ -62,12 +62,12 @@ function setup(){
     //trex.debug = true;
     trex.setCollider("rectangle",0,0,100,100);
 
-    gameOver = createSprite(width/2,height/2-50);
+    gameOver = createSprite(300,100);
     gameOver.addImage(gameOver_img);
     gameOver.scale = 0.7;
     gameOver.visible = false;
     
-    restart = createSprite(width/2,height/2);
+    restart = createSprite(300,130);
     restart.addImage(restart_img);
     restart.scale = 0.5;
     restart.visible = false;
@@ -86,10 +86,9 @@ function draw(){
             ponto.play();
         }
         //pular
-        if( (touches.length > 0 || keyDown("space")) && trex.y > 150){
+        if(keyDown("space") && trex.y > 150){
             trex.velocityY = -10;
             jump.play(); 
-            touches=[];
             
         }
         //gravidade
@@ -136,13 +135,12 @@ function draw(){
 
 function gerarNuvem(){
     if(frameCount%60 === 0){
-        var nuvem = createSprite(width,100,40,10);
+        var nuvem = createSprite(600,100,40,10);
         nuvem.velocityX = -2;
         nuvem.y = Math.round(random(20,70));
         nuvem.addImage(nuvemImg);
         nuvem.scale = 0.5;
-
-        nuvem.lifetime = width/2;
+        nuvem.lifetime = 300;
 
         //mudando camadas
         trex.depth = trex.depth+1;
