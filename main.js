@@ -1,183 +1,176 @@
-
-    //variáveis globais
+//variáveis globais
+var trex, trex_running,trex_collided, ground, groundImg;
+var chao_invisivel, num1, num2;
+var nuvemImg;
+var grupoNuvem, grupoObs;
+var score = 0;
 var PLAY = 1;
 var END = 0;
-
 var gameState = PLAY;
-
-var trex, trex_img,ground,ground_img;
-var ground2;
-var nuvemImg,cacto1,cacto2,cacto3,cacto4,cacto5,cacto6;
-var grupoNuvens, grupoCactos;
-var trex_collided;
-var jump, die, ponto;
-var placar = 0;
-var gameOver, restart, gameOver_img, restart_img;
+var jumpSound, dieSound, pointSound;
+var gameOver, restart, gameOverImg, restartImg;
 
 //função de carregamento de arquivos
-function preload(){
-    trex_img = loadAnimation("trex1.png","trex3.png","trex4.png");
+function preload (){
+    trex_running = loadAnimation("trex1.png","trex3.png","trex4.png");
     trex_collided = loadAnimation("trex_collided.png");
-
-    ground_img = loadImage("ground2.png");
-    nuvemImg = loadImage("cloud.png");
-    cacto1 = loadImage("obstacle1.png");
-    cacto2 = loadImage("obstacle2.png");
-    cacto3 = loadImage("obstacle3.png");
-    cacto4 = loadImage("obstacle4.png");
-    cacto5 = loadImage("obstacle5.png");
-    cacto6 = loadImage("obstacle6.png");
-
-    jump = loadSound("jump.mp3");
-    die = loadSound("die.mp3");
-    ponto = loadSound("checkpoint.mp3");
-
-    gameOver_img = loadImage("gameOver.png");
-    restart_img = loadImage("restart.png");
-
+    groundImg = loadImage("ground2.png");
+    nuvemImg = loadImage ("cloud.png");
+    obstaculo1 = loadImage("obstacle1.png");
+    obstaculo2 = loadImage("obstacle2.png");
+    obstaculo3 = loadImage("obstacle3.png");
+    obstaculo4 = loadImage("obstacle4.png");
+    obstaculo5 = loadImage("obstacle5.png");
+    obstaculo6 = loadImage("obstacle6.png");
+    jumpSound = loadSound("jump.mp3");
+    pointSound = loadSound("checkpoint.mp3");
+    gameOverImg = loadImage("gameOver.png");
+    restartImg = loadImage("restart.png");
 }
 
-//função de criação de objetos e suas propriedades
+//função criação de sprites e propriedades
 function setup(){
     createCanvas(windowWidth,windowHeight);
-    trex = createSprite(50,height-170,30,70);
-    trex.addAnimation("correndo",trex_img);
-    trex.addAnimation("morreu",trex_collided);
 
-    trex.scale = 0.7;
-    
-    //chão
-    ground = createSprite(300,height-190,600,10);
-    ground.addImage(ground_img);
+    trex = createSprite(50,height-70,20,60);
+    trex.scale=0.8;
+    trex.addAnimation("running",trex_running);
+    trex.addAnimation("trex_collided",trex_collided);
+
+    ground = createSprite(width/2,height,width,20);
+    ground.addImage("ground",groundImg);
     ground.x = ground.width/2;
     
+    chao_invisivel = createSprite(width/2,height-10,width,125);
+    chao_invisivel.visible = false;
 
-    //chao invisível
-    ground2 = createSprite(300,height-170,600,10);
-    ground2.visible = false;
+    grupoNuvem = new Group();
+    grupoObs = new Group();
 
-    grupoCactos = new Group();
-    grupoNuvens = new Group();
-
-    //trex.debug = true;
-    trex.setCollider("rectangle",0,0,100,100);
-
-    gameOver = createSprite(300,100);
-    gameOver.addImage(gameOver_img);
-    gameOver.scale = 0.7;
-    gameOver.visible = false;
+    trex.debug = true;
+    trex.setCollider("rectangle",0,0,70,90);
     
-    restart = createSprite(300,130);
-    restart.addImage(restart_img);
-    restart.scale = 0.5;
+    gameOver = createSprite(width/2,height/2- 50);
+    gameOver.addImage(gameOverImg);
+  
+    restart = createSprite(width/2,height/2);
+    restart.addImage(restartImg);
+    
+    gameOver.scale = 0.5;
+    restart.scale = 0.1;
+
+    gameOver.visible = false;
     restart.visible = false;
+
 }
 
-//desenha em loop/frames
+//função que desenha e repete em frames
 function draw(){
     background("white");
-    textSize(18);
-    text("Placar: "+placar,450,60);
-
-    if(gameState == PLAY){
-        //pontuação
-        placar = placar + Math.round(frameRate()/60);
-        if(placar > 0 && placar%100 === 0){
-            ponto.play();
+    //pontuação na tela
+    text("SCORE: " + score,500,50);
+    
+    if(gameState === PLAY){
+        //atualizar pontuação
+        score = score + Math.round(getFrameRate()/60);
+        //faz o trex pular
+        if((touches.length > 0 || keyDown("space")) && trex.y >= height-120 ){
+            trex.velocityY = -12; 
+            jumpSound.play();
+            touches=[];
         }
-        //pular
-        if(keyDown("space") && trex.y > 150){
-            trex.velocityY = -10;
-            jump.play(); 
-            
-        }
-        //gravidade
-        trex.velocityY = trex.velocityY + 0.5;
-        ground.velocityX = -5;
-        gerarNuvem();
+        //criando força de gravidade
+        trex.velocityY += 0.5;
+        //movimento do chão
+        ground.velocityX = -2;
 
-        gerarCactos();
-
-        if(trex.isTouching(grupoCactos)){
+        gerarNuvens();
+        gerarObs();
+        
+        if(grupoObs.isTouching(trex)){
             gameState = END;
-            die.play();
-
         }
-    }else if(gameState == END){
-        ground.velocityX=0;
-        grupoCactos.setVelocityXEach(0);
-        grupoNuvens.setVelocityXEach(0);
-        grupoNuvens.setLifetimeEach(-1);
-        grupoCactos.setLifetimeEach(-1);
-
-        trex.changeAnimation("morreu",trex_collided);
+    }else if(gameState === END){
         gameOver.visible = true;
         restart.visible = true;
+
+        ground.velocityX = 0;
+
+        trex.changeAnimation("trex_collided",trex_collided);
+
+        grupoObs.setVelocityXEach(0);
+        grupoNuvem.setVelocityXEach(0);
+
+        grupoObs.setLifetimeEach(-1);
+        grupoNuvem.setLifetimeEach(-1);
+        trex.velocityY = 0;
+        if(mousePressedOver(restart)){
+            reset();
+        }
     }
 
-    //fundo infinito
+    //colisão trex e chao
+    trex.collide(chao_invisivel);
+    
+
+    //chão infinito
     if(ground.x < 0){
         ground.x = ground.width/2;
     }
-    //trex colide com chão invisível
-    trex.collide(ground2);
 
-    
-    //clique no restart chama a função reset
-    if(mousePressedOver(restart)){
-        reset();
+    if(score>0 && score%100 === 0){
+        pointSound.play();
     }
-
+    
     drawSprites();
+}
+
+//criando a função que gera as nuvens
+function gerarNuvens(){
+    
+    if(frameCount%60 === 0){
+        var nuvem = createSprite(width+20,height-300,40,10);
+        nuvem.velocityX = -2;
+        nuvem.y = random(100,220);
+        nuvem.addImage("nuvem",nuvemImg);
+        nuvem.scale = 0.5;
+        //
+        nuvem.depth = trex.depth;
+        trex.depth += 1;
+        //
+        nuvem.lifetime = 300;
+        grupoNuvem.add(nuvem);
+    }
     
 }
-
-
-function gerarNuvem(){
+//
+function gerarObs(){
     if(frameCount%60 === 0){
-        var nuvem = createSprite(600,100,40,10);
-        nuvem.velocityX = -2;
-        nuvem.y = Math.round(random(20,70));
-        nuvem.addImage(nuvemImg);
-        nuvem.scale = 0.5;
-        nuvem.lifetime = 300;
-
-        //mudando camadas
-        trex.depth = trex.depth+1;
-        nuvem.depth = trex.depth;
+        var obstaculo = createSprite(600,height-95,20,30);
+        obstaculo.velocityX = -4;
         
-        grupoNuvens.add(nuvem);
-    }    
-}
+        var rand = Math.round(random(1,6));
 
-function gerarCactos(){
-    if(frameCount%60 == 0){
-        var cacto = createSprite(width,height-200,10,50);
-        cacto.velocityX = -5;
-        cacto.scale=0.8;
-
-        var num = Math.round(random(1,6));
-        switch(num){
-            case 1:cacto.addImage(cacto1);
-                 break;
-            case 2:cacto.addImage(cacto2);
-                 break;
-            case 3:cacto.addImage(cacto3);
-                 break;
-            case 4:cacto.addImage(cacto4);
-                 break;
-            case 5:cacto.addImage(cacto5);
-                 break;
-            case 6:cacto.addImage(cacto6);
-                 break;
+        switch(rand){
+            case 1: obstaculo.addImage(obstaculo1);
+                    break;
+            case 2: obstaculo.addImage(obstaculo2);
+                    break;
+            case 3: obstaculo.addImage(obstaculo3);
+                    break;
+            case 4: obstaculo.addImage(obstaculo4);
+                    break;
+            case 5: obstaculo.addImage(obstaculo5);
+                    break;
+            case 6: obstaculo.addImage(obstaculo6);
+                    break;
             default:break;
-        }
-        console.log(num);
-        //largura da tela e divide pela velocidade
-        cacto.lifetime = width/5;
-        cacto.depth = trex.depth;
 
-        grupoCactos.add(cacto);
+        }  
+
+        obstaculo.scale=0.8;
+        obstaculo.lifetime=200; 
+        grupoObs.add(obstaculo); 
     }
 }
 
@@ -185,8 +178,12 @@ function reset(){
     gameState = PLAY;
     gameOver.visible = false;
     restart.visible = false;
-    trex.changeAnimation("correndo",trex_img);
-    grupoCactos.destroyEach();
-    grupoNuvens.destroyEach();
-    placar = 0;
-}
+    
+    grupoObs.destroyEach();
+    grupoNuvem.destroyEach();
+    
+    trex.changeAnimation("running",trex_running);
+    
+    score = 0;
+    
+  }
